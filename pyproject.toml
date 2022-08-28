@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "logistics-or-gym"
+version = "0.1.0"
+description = ""
+authors = ["hadisdev <hadi.salameh@hotmail.com>"]
+
+[tool.poetry.dependencies]
+python = ">=3.8 <3.11"
+numpy = "~1.23.2"
+gym = "*"
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
