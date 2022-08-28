@@ -1,1 +1,1 @@
-![Tests Workflow](https://github.com/HublyGroup/logistics-or-gym/blob/main/.github/workflows/python-app.yml/badge.svg)
+![Tests Workflow](https://github.comHublyGroup/logistics-or-gym/actions/workflows/python-app.yml/badge.svg)
