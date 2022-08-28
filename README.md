@@ -1,0 +1,1 @@
+![Tests Workflow](https://github.com/HublyGroup/logistics-or-gym/blob/main/.github/workflows/python-app.yml/badge.svg)
