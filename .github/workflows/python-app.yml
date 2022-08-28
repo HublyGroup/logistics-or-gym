@@ -1,0 +1,48 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Python application
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      # If you wanted to use multiple Python versions, you'd have specify a matrix in the job and
+      # reference the matrixe python version here.
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+          
+      - name: Setup Poetry
+        uses: Gr1N/setup-poetry@v7
+      
+
+      - run: poetry install --no-interaction --no-root
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+
+      # Now install _your_ project. This isn't necessary for many types of projects -- particularly
+      # things like Django apps don't need this. But it's a good idea since it fully-exercises the
+      # pyproject.toml and makes that if you add things like console-scripts at some point that
+      # they'll be installed and working.
+      - run: poetry install --no-interaction
+
+      # And finally run tests. I'm using pytest and all my pytest config is in my `pyproject.toml`
+      # so this line is super-simple. But it could be as complex as you need.
+      - run: poetry run pytest
+      
+      - run: poetry build
+      
+      - run: poetry publish
