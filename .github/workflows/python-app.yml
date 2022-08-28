@@ -18,17 +18,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
 
-      # If you wanted to use multiple Python versions, you'd have specify a matrix in the job and
-      # reference the matrixe python version here.
-      - uses: actions/setup-python@v2
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v1
         with:
           python-version: 3.9
-          
-      - name: Setup Poetry
-        uses: Gr1N/setup-poetry@v7
-      
+
+      - name: Install Poetry
+        uses: dschep/install-poetry-action@v1.2
+
       - name: Cache Poetry virtualenv
         uses: actions/cache@v1
         id: cache
@@ -42,14 +43,11 @@ jobs:
         run: |
           poetry config settings.virtualenvs.in-project false
           poetry config settings.virtualenvs.path ~/.virtualenvs
-          
+
       - name: Install Dependencies
         run: poetry install
         if: steps.cache.outputs.cache-hit != 'true'
-      # And finally run tests. I'm using pytest and all my pytest config is in my `pyproject.toml`
-      # so this line is super-simple. But it could be as complex as you need.
-      - run: poetry run pytest
-      
-      - run: poetry build
-      
-      - run: poetry publish
+
+
+      - name: Test with pytest
+        run: poetry run pytest --cov . -n 2
