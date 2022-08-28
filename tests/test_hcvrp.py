@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from routing.envs.HCVRP import HCVRP
+from logistics_or_gym.envs.HCVRP import HCVRP
 
 
 class HCVRPTests(unittest.TestCase):
