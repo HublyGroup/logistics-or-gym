@@ -16,7 +16,7 @@ class HCVRP(Env, ABC):
         100: [20., 25., 30.],
         120: [20., 25., 30.],
     }
-
+    """Environment Steps"""
     steps: int = 0
     rewards: List[List[int]] = None
     demand: np.ndarray = None
@@ -66,7 +66,23 @@ class HCVRP(Env, ABC):
         self.prev_vehicle: int = -1
         self.prev_node: int = 0
 
+        obs = {
+            "free_capacity": self.free_capacity,
+            "acc_travel_time": self.acc_travel_time,
+            "partial_route": self.partial_route,
+            "node_loc": self.node_loc,
+            "demand": self.demand,
+            "action_mask": self.get_action_mask()
+        }
+
+        return obs
+
+
+
     def _transition(self, current_vehicle: int, selected_vehicle: int, selected_node: int):
+        """The Transition function is a direct implementation of the transition function from:
+            http://arxiv.org/abs/2110.02629 http://dx.doi.org/10.1109/TCYB.2021.3111082
+        """
         node_loc = self.node_loc[selected_node]
         demand = self.demand[selected_node - 1] if selected_node > 0 else 0
 
@@ -138,9 +154,15 @@ class HCVRP(Env, ABC):
 
         return np.concatenate([can_depot, can_collect], axis=1)
 
+    def is_done(self) -> bool:
+        partial_route = np.array(self.partial_route)
+        return np.alltrue(self.node_loc[0] == self.node_loc[partial_route[:, -1]]) and np.alltrue(self.visited)
+
     def step(self, action: Dict[str, int]):
         selected_node: int = action["node"]
         selected_vehicle: int = action["vehicle"]
+
+        assert selected_vehicle < self.n_vehicles
 
         self.visited[selected_node] = True  # or 1
 
@@ -161,8 +183,8 @@ class HCVRP(Env, ABC):
         }
 
         cost = self.reward()
-        partial_route = np.array(self.partial_route)
-        is_done = np.alltrue(self.node_loc[0] == self.node_loc[partial_route[:, -1]]) and np.alltrue(self.visited)
+
+        is_done = self.is_done()
         self.steps += 1
 
         return obs, cost, is_done, {}
