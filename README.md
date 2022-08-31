@@ -3,7 +3,7 @@
  [![PyPI version](https://badge.fury.io/py/logistics-or-gym.svg)](https://badge.fury.io/py/logistics-or-gym)
 
 ![Logo](img/4x/logo2.png#gh-dark-mode-only)
-![LogoBlack](img/4x/logo2.png#gh-light-mode-only)
+![LogoBlack](img/4x/logo-black.png#gh-light-mode-only)
 
 # Introduction
 Logistics-OR-gym is a "collection" of Open AI Gym environments ment to simualte logistical problems such as routing, 
