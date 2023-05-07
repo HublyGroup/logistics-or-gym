@@ -20,7 +20,9 @@ class HCVRPTests(unittest.TestCase):
 
         env.reset()
         env.demand = np.ones(shape=(env.n_nodes,))
-        env.node_loc = np.array([[0.0, 0.0], [0.2, 0.2], [0.2, 0.3], [0.4, 0.2], [0.1, 0.6], [1, 1]])
+        env.node_loc = np.array(
+            [[0.0, 0.0], [0.2, 0.2], [0.2, 0.3], [0.4, 0.2], [0.1, 0.6], [1, 1]]
+        )
 
         self.assertFalse(env.is_done())
 
@@ -29,7 +31,9 @@ class HCVRPTests(unittest.TestCase):
 
         env.reset()
         env.demand = np.ones(shape=(env.n_nodes,))
-        env.node_loc = np.array([[0.0, 0.0], [0.2, 0.2], [0.2, 0.3], [0.4, 0.2], [0.1, 0.6], [1, 1]])
+        env.node_loc = np.array(
+            [[0.0, 0.0], [0.2, 0.2], [0.2, 0.3], [0.4, 0.2], [0.1, 0.6], [1, 1]]
+        )
 
         action = {"node": 1, "vehicle": 0}
         env.step(action)
@@ -38,7 +42,7 @@ class HCVRPTests(unittest.TestCase):
         env.step(action)
 
         action = {"node": 3, "vehicle": 0}
-        _, _, done, _ = env.step(action)
+        _, _, done, _, _ = env.step(action)
 
         action = {"node": 0, "vehicle": 0}
         env.step(action)
@@ -50,7 +54,7 @@ class HCVRPTests(unittest.TestCase):
         env.step(action)
 
         action = {"node": 0, "vehicle": 1}
-        _, _, done, _ = env.step(action)
+        _, _, done, _, _ = env.step(action)
 
         self.assertTrue(done)
         np.testing.assert_array_equal([0, 1, 2, 3, 0, 0, 0, 0], env.partial_route[0])
@@ -61,7 +65,9 @@ class HCVRPTests(unittest.TestCase):
 
         env.reset()
         env.demand = np.ones(shape=(env.n_nodes,))
-        env.node_loc = np.array([[0.0, 0.0], [0.2, 0.2], [0.2, 0.3], [0.4, 0.2], [0.1, 0.6], [1, 1]])
+        env.node_loc = np.array(
+            [[0.0, 0.0], [0.2, 0.2], [0.2, 0.3], [0.4, 0.2], [0.1, 0.6], [1, 1]]
+        )
 
         action = {"node": 1, "vehicle": 0}
         env.step(action)
@@ -79,12 +85,23 @@ class HCVRPTests(unittest.TestCase):
         env.step(action)
 
         action = {"node": 0, "vehicle": 0}
-        _, _, done, _ = env.step(action)
+        _, _, done, _, _ = env.step(action)
 
         self.assertTrue(done)
         self.assertEqual(len(env.partial_route), 1)
-        np.testing.assert_array_equal([0, 1, 2, 3, 4, 5, 0, ], env.partial_route[0])
+        np.testing.assert_array_equal(
+            [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                0,
+            ],
+            env.partial_route[0],
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
