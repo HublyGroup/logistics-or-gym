@@ -3,6 +3,7 @@ from typing import Optional, List, Dict
 
 import numpy as np
 from gymnasium import spaces, Env
+from gymnasium.spaces import MultiDiscrete
 
 
 class HCVRP(Env, ABC):
@@ -34,18 +35,17 @@ class HCVRP(Env, ABC):
         self.vehicle_speed = 1
         self.n_nodes = n_nodes
         self.n_vehicles = n_vehicles
-        self.action_space = spaces.Box(
-            0, self.n_nodes + self.n_vehicles + 1, shape=(self.n_vehicles, self.n_nodes)
-        )
+        self.action_space = MultiDiscrete([self.n_nodes + 1, self.n_vehicles])
+
         self.max_step = 1000
         self.observation_space = spaces.Dict(
             {
-                "free_capacity": spaces.Box(0, 100, shape=(n_vehicles, 1)),
-                "acc_travel_time": spaces.Box(0, 100, shape=(n_vehicles, 1)),
-                "partial_route": spaces.Box(
-                    0, n_nodes, shape=(n_vehicles, n_nodes + 1)
+                "free_capacity": spaces.Box(0, 100, shape=(n_vehicles, )),
+                "acc_travel_time": spaces.Box(0, 100, shape=(n_vehicles, )),
+                "partial_route": spaces.Sequence(
+                    spaces.Sequence(spaces.Discrete(self.n_nodes + 1))
                 ),
-                "node_loc": spaces.Box(0, 1, shape=(n_nodes, 2)),
+                "node_loc": spaces.Box(0, 1, shape=(n_nodes + 1, 2)),
                 "demand": spaces.Box(0, 1, shape=(n_nodes,)),
                 "action_mask": spaces.Box(
                     0, 1, shape=(self.n_vehicles, self.n_nodes + 1)
@@ -86,7 +86,7 @@ class HCVRP(Env, ABC):
             "action_mask": self.get_action_mask(),
         }
 
-        return obs
+        return obs, {}
 
     def _transition(
         self, current_vehicle: int, selected_vehicle: int, selected_node: int
@@ -181,9 +181,9 @@ class HCVRP(Env, ABC):
             self.node_loc[0] == self.node_loc[partial_route[:, -1]]
         ) and np.alltrue(self.visited)
 
-    def step(self, action: Dict[str, int]):
-        selected_node: int = action["node"]
-        selected_vehicle: int = action["vehicle"]
+    def step(self, action: np.ndarray):
+        selected_node: int = action[0]
+        selected_vehicle: int = action[1]
 
         assert selected_vehicle < self.n_vehicles
 
