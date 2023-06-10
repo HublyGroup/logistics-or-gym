@@ -1,27 +1,17 @@
 from abc import ABC
-from typing import Optional, List, Dict
+from typing import Optional
 
 import numpy as np
 from gymnasium import spaces, Env
+from gymnasium.spaces import MultiDiscrete
 
 
 class HCVRP(Env, ABC):
-    CAPACITIES = {
-        10: [20.0, 25.0, 30.0],
-        20: [20.0, 25.0, 30.0],
-        40: [20.0, 25.0, 30.0],
-        50: [20.0, 25.0, 30.0],
-        60: [20.0, 25.0, 30.0],
-        80: [20.0, 25.0, 30.0],
-        100: [20.0, 25.0, 30.0],
-        120: [20.0, 25.0, 30.0],
-    }
-    """Environment Steps"""
     steps: int = 0
-    rewards: List[List[int]] = None
+    rewards: list[list[int]] = None
     demand: np.ndarray = None
     node_loc: np.ndarray = None
-    partial_route: List[List[int]] = None
+    partial_route: list[list[int]] = None
     acc_travel_time: np.ndarray = None
     free_capacity: np.ndarray = None
     visited: np.ndarray = None
@@ -34,18 +24,17 @@ class HCVRP(Env, ABC):
         self.vehicle_speed = 1
         self.n_nodes = n_nodes
         self.n_vehicles = n_vehicles
-        self.action_space = spaces.Box(
-            0, self.n_nodes + self.n_vehicles + 1, shape=(self.n_vehicles, self.n_nodes)
-        )
+        self.action_space = MultiDiscrete([self.n_nodes + 1, self.n_vehicles])
+
         self.max_step = 1000
         self.observation_space = spaces.Dict(
             {
-                "free_capacity": spaces.Box(0, 100, shape=(n_vehicles, 1)),
-                "acc_travel_time": spaces.Box(0, 100, shape=(n_vehicles, 1)),
-                "partial_route": spaces.Box(
-                    0, n_nodes, shape=(n_vehicles, n_nodes + 1)
+                "free_capacity": spaces.Box(0, 100, shape=(n_vehicles,)),
+                "acc_travel_time": spaces.Box(0, 100, shape=(n_vehicles,)),
+                "partial_route": spaces.Sequence(
+                    spaces.Sequence(spaces.Discrete(self.n_nodes + 1))
                 ),
-                "node_loc": spaces.Box(0, 1, shape=(n_nodes, 2)),
+                "node_loc": spaces.Box(0, 1, shape=(n_nodes + 1, 2)),
                 "demand": spaces.Box(0, 1, shape=(n_nodes,)),
                 "action_mask": spaces.Box(
                     0, 1, shape=(self.n_vehicles, self.n_nodes + 1)
@@ -86,7 +75,7 @@ class HCVRP(Env, ABC):
             "action_mask": self.get_action_mask(),
         }
 
-        return obs
+        return obs, {}
 
     def _transition(
         self, current_vehicle: int, selected_vehicle: int, selected_node: int
@@ -99,7 +88,7 @@ class HCVRP(Env, ABC):
 
         free_cap: float = self.free_capacity[current_vehicle]
         acc_travel_time: float = self.acc_travel_time[current_vehicle]
-        partial_route: List[int] = self.partial_route[current_vehicle]
+        partial_route: list[int] = self.partial_route[current_vehicle]
 
         new_cap = self._transition_capacity(
             current_vehicle, selected_vehicle, free_cap, demand
@@ -181,10 +170,7 @@ class HCVRP(Env, ABC):
             self.node_loc[0] == self.node_loc[partial_route[:, -1]]
         ) and np.alltrue(self.visited)
 
-    def step(self, action: Dict[str, int]):
-        selected_node: int = action["node"]
-        selected_vehicle: int = action["vehicle"]
-
+    def step(self, selected_node: int, selected_vehicle):
         assert selected_vehicle < self.n_vehicles
 
         self.visited[selected_node] = True  # or 1

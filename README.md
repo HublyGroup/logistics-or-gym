@@ -1,4 +1,5 @@
- [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![Tests Workflow](https://github.com/HublyGroup/logistics-or-gym/actions/workflows/python-app.yml/badge.svg)
  [![PyPI version](https://badge.fury.io/py/logistics-or-gym.svg)](https://badge.fury.io/py/logistics-or-gym)
 
@@ -36,7 +37,7 @@ that is needed) and different speeds. This implementation follows the one from:
 ````
 To use the environment simply use the gym library to create it:
 ````python
-import gym
+import gymnasium as gym
 gym.make("hcvrp-v0")
 ````
 The arguments you can pass are: 

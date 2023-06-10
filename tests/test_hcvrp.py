@@ -35,26 +35,19 @@ class HCVRPTests(unittest.TestCase):
             [[0.0, 0.0], [0.2, 0.2], [0.2, 0.3], [0.4, 0.2], [0.1, 0.6], [1, 1]]
         )
 
-        action = {"node": 1, "vehicle": 0}
-        env.step(action)
+        env.step(selected_node=1, selected_vehicle=0)
 
-        action = {"node": 2, "vehicle": 0}
-        env.step(action)
+        env.step(selected_node=2, selected_vehicle=0)
 
-        action = {"node": 3, "vehicle": 0}
-        _, _, done, _, _ = env.step(action)
+        _, _, done, _, _ = env.step(selected_node=3, selected_vehicle=0)
 
-        action = {"node": 0, "vehicle": 0}
-        env.step(action)
+        env.step(selected_node=0, selected_vehicle=0)
 
-        action = {"node": 4, "vehicle": 1}
-        env.step(action)
+        env.step(selected_node=4, selected_vehicle=1)
 
-        action = {"node": 5, "vehicle": 1}
-        env.step(action)
+        env.step(selected_node=5, selected_vehicle=1)
 
-        action = {"node": 0, "vehicle": 1}
-        _, _, done, _, _ = env.step(action)
+        _, _, done, _, _ = env.step(selected_node=0, selected_vehicle=1)
 
         self.assertTrue(done)
         np.testing.assert_array_equal([0, 1, 2, 3, 0, 0, 0, 0], env.partial_route[0])
@@ -69,23 +62,17 @@ class HCVRPTests(unittest.TestCase):
             [[0.0, 0.0], [0.2, 0.2], [0.2, 0.3], [0.4, 0.2], [0.1, 0.6], [1, 1]]
         )
 
-        action = {"node": 1, "vehicle": 0}
-        env.step(action)
+        env.step(selected_node=1, selected_vehicle=0)
 
-        action = {"node": 2, "vehicle": 0}
-        env.step(action)
+        env.step(selected_node=2, selected_vehicle=0)
 
-        action = {"node": 3, "vehicle": 0}
-        env.step(action)
+        env.step(selected_node=3, selected_vehicle=0)
 
-        action = {"node": 4, "vehicle": 0}
-        env.step(action)
+        env.step(selected_node=4, selected_vehicle=0)
 
-        action = {"node": 5, "vehicle": 0}
-        env.step(action)
+        env.step(selected_node=5, selected_vehicle=0)
 
-        action = {"node": 0, "vehicle": 0}
-        _, _, done, _, _ = env.step(action)
+        _, _, done, _, _ = env.step(selected_node=0, selected_vehicle=0)
 
         self.assertTrue(done)
         self.assertEqual(len(env.partial_route), 1)
