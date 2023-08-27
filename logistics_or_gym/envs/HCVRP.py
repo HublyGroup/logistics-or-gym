@@ -29,10 +29,10 @@ class HCVRP(Env, ABC):
         self.max_step = 1000
         self.observation_space = spaces.Dict(
             {
-                "free_capacity": spaces.Box(0, 100, shape=(n_vehicles, 1)),
-                "acc_travel_time": spaces.Box(0, 100, shape=(n_vehicles, 1)),
-                "partial_route": spaces.Box(
-                    0, n_nodes, shape=(n_vehicles, n_nodes + 1)
+                "free_capacity": spaces.Box(0, 100, shape=(n_vehicles,)),
+                "acc_travel_time": spaces.Box(0, 100, shape=(n_vehicles,)),
+                "partial_route": spaces.Sequence(
+                    spaces.Sequence(spaces.Discrete(self.n_nodes + 1))
                 ),
                 "node_loc": spaces.Box(0, 1, shape=(n_nodes + 1, 2)),
                 "demand": spaces.Box(0, 1, shape=(n_nodes,)),
@@ -170,10 +170,7 @@ class HCVRP(Env, ABC):
             self.node_loc[0] == self.node_loc[partial_route[:, -1]]
         ) and np.alltrue(self.visited)
 
-    def step(self, action: dict[str, int]):
-        selected_node: int = action["node"]
-        selected_vehicle: int = action["vehicle"]
-
+    def step(self, selected_node: int, selected_vehicle: int):
         assert selected_vehicle < self.n_vehicles
 
         self.visited[selected_node] = True  # or 1
