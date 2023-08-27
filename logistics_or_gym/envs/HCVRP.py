@@ -170,7 +170,7 @@ class HCVRP(Env, ABC):
             self.node_loc[0] == self.node_loc[partial_route[:, -1]]
         ) and np.alltrue(self.visited)
 
-    def step(self, action: Dict[str, int]):
+    def step(self, action: dict[str, int]):
         selected_node: int = action["node"]
         selected_vehicle: int = action["vehicle"]
 
