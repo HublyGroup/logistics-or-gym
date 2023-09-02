@@ -6,39 +6,54 @@ from gymnasium import spaces, Env
 from gymnasium.spaces import MultiDiscrete
 
 
-class HCVRP(Env, ABC):
+class HeterogeneousCVRP(Env, ABC):
     steps: int = 0
     rewards: list[list[int]] = None
     demand: np.ndarray = None
     node_loc: np.ndarray = None
-    partial_route: list[list[int]] = None
+    partial_routes: list[list[int]] = None
     acc_travel_time: np.ndarray = None
     free_capacity: np.ndarray = None
     visited: np.ndarray = None
     prev_vehicle: int = None
     prev_node: int = None
 
-    def __init__(self, n_vehicles=3, n_nodes=50):
+    def __init__(self,
+                 n_vehicles: int = 2,
+                 n_nodes: int = 50,
+                 n_depots: int = 1,
+                 capacities: Optional[list[float]] = None):
+        """
+
+        :param n_vehicles (int): The number of vehicles in the plan. Defaults to 2
+        :param n_nodes (int): number of nodes in the graph aka. the locations where demands needs to be picked up.
+        Defaults to 50
+        :param n_depots (int): The number of depots. Defaults to 1.
+        :param capacities (list[float]): Specify the capacity of each vehicle. Defaults to None which means a normalized
+        capacity of 1 will be applied to all vehicles
+        """
         super().__init__()
 
+        self.n_depots = n_depots
         self.vehicle_speed = 1
         self.n_nodes = n_nodes
         self.n_vehicles = n_vehicles
-        self.action_space = MultiDiscrete([self.n_nodes + 1, self.n_vehicles])
+        self.action_space = MultiDiscrete([self.n_vehicles, self.n_nodes + self.n_depots], dtype=int)
+
+        if capacities is None:
+            self.capacities = [1.0] * n_vehicles
+        else:
+            assert len(capacities) == self.n_vehicles
 
         self.max_step = 1000
         self.observation_space = spaces.Dict(
             {
-                "free_capacity": spaces.Box(0, 100, shape=(n_vehicles,)),
-                "acc_travel_time": spaces.Box(0, 100, shape=(n_vehicles,)),
-                "partial_route": spaces.Sequence(
-                    spaces.Sequence(spaces.Discrete(self.n_nodes + 1))
-                ),
-                "node_loc": spaces.Box(0, 1, shape=(n_nodes + 1, 2)),
-                "demand": spaces.Box(0, 1, shape=(n_nodes,)),
-                "action_mask": spaces.Box(
-                    0, 1, shape=(self.n_vehicles, self.n_nodes + 1)
-                ),
+                "free_capacity": spaces.Box(0, 100, shape=(self.n_vehicles,)),
+                "acc_travel_time": spaces.Box(0, 100, shape=(self.n_vehicles,)),
+                "partial_routes": spaces.Sequence(spaces.Sequence(spaces.Discrete(self.n_depots + self.n_nodes))),
+                "node_loc": spaces.Box(0, 1, shape=(self.n_depots + self.n_nodes, 2)),
+                "demand": spaces.Box(0, 1, shape=(self.n_nodes,)),
+                "action_mask": spaces.Box(0, 1, shape=(self.n_vehicles, self.n_depots + self.n_nodes)),
             }
         )
 
@@ -46,21 +61,26 @@ class HCVRP(Env, ABC):
         pass
 
     def reset(
-        self,
-        *,
-        seed: Optional[int] = None,
-        return_info: bool = False,
-        options: Optional[dict] = None,
+            self,
+            *,
+            seed: Optional[int] = None,
+            return_info: bool = False,
+            options: Optional[dict] = None,
     ):
         if seed is not None:
             np.random.seed(seed=seed)
-        self.free_capacity = np.array([20.0] * self.n_vehicles)
-        self.acc_travel_time = np.zeros(shape=(self.n_vehicles,))
-        self.partial_route = [[0]] * self.n_vehicles  # starts at depot
-        self.node_loc = np.random.uniform(0, 1, size=(self.n_nodes + 1, 2))
-        self.demand = np.random.uniform(0, 1, size=(self.n_nodes,))
-        self.visited = np.zeros(shape=(self.n_nodes + 1), dtype=bool)
 
+        self.free_capacity = np.array(self.capacities)
+        self.acc_travel_time = np.zeros(shape=(self.n_vehicles,))
+        self.partial_routes = [[np.random.randint(0, self.n_depots)] for _ in range(self.n_vehicles)]  # starts at depot
+        self.node_loc = np.random.uniform(0, 1, size=(self.n_depots + self.n_nodes, 2))
+        self.demand = np.random.uniform(0, 1,
+                                        size=(self.n_depots + self.n_nodes,))  # Include depots so the indexes matches
+        self.demand[list(range(self.n_depots))] = 0
+        self.visited = np.zeros(shape=(self.n_depots + self.n_nodes),
+                                dtype=bool)  # Include depots so the indexes matches
+        self.visited[list(range(self.n_depots))] = [d in [pr[0] for pr in self.partial_routes] for d in
+                                                    range(self.n_depots)]
         self.rewards = [[0]] * self.n_vehicles
         self.steps = 0
         self.prev_vehicle: int = -1
@@ -69,7 +89,7 @@ class HCVRP(Env, ABC):
         obs = {
             "free_capacity": self.free_capacity,
             "acc_travel_time": self.acc_travel_time,
-            "partial_route": self.partial_route,
+            "partial_routes": self.partial_routes,
             "node_loc": self.node_loc,
             "demand": self.demand,
             "action_mask": self.get_action_mask(),
@@ -77,18 +97,19 @@ class HCVRP(Env, ABC):
 
         return obs, {}
 
+
     def _transition(
-        self, current_vehicle: int, selected_vehicle: int, selected_node: int
+            self, current_vehicle: int, selected_vehicle: int, selected_node: int
     ):
         """The Transition function is a direct implementation of the transition function from:
         http://arxiv.org/abs/2110.02629 http://dx.doi.org/10.1109/TCYB.2021.3111082
         """
         node_loc = self.node_loc[selected_node]
-        demand = self.demand[selected_node - 1] if selected_node > 0 else 0
+        demand = self.demand[selected_node]
 
         free_cap: float = self.free_capacity[current_vehicle]
         acc_travel_time: float = self.acc_travel_time[current_vehicle]
-        partial_route: list[int] = self.partial_route[current_vehicle]
+        partial_route: list[int] = self.partial_routes[current_vehicle]
 
         new_cap = self._transition_capacity(
             current_vehicle, selected_vehicle, free_cap, demand
@@ -100,14 +121,17 @@ class HCVRP(Env, ABC):
             current_vehicle, selected_vehicle, partial_route, selected_node
         )
 
-        if selected_node > 0:
-            self.demand[selected_node - 1] = 0
+        if selected_node > self.n_depots:
+            self.demand[selected_node] = 0
+
+        if self.n_depots < selected_node:
+            self.free_capacity[selected_vehicle] = 0
 
         return new_cap, new_time, new_path, inc_time
 
     @staticmethod
     def _transition_capacity(
-        current_vehicle: int, selected_vehicle: int, old_cap: float, old_demand: float
+            current_vehicle: int, selected_vehicle: int, old_cap: float, old_demand: float
     ):
         if current_vehicle == selected_vehicle:
             return old_cap - old_demand
@@ -115,31 +139,33 @@ class HCVRP(Env, ABC):
         return old_cap
 
     def _transition_acc_time(
-        self,
-        current_vehicle: int,
-        selected_vehicle: int,
-        old_time: float,
-        old_path: np.ndarray,
-        node_loc: np.ndarray,
+            self,
+            current_vehicle: int,
+            selected_vehicle: int,
+            old_time: float,
+            old_path: list[int],
+            node_loc: np.ndarray,
     ):
         if current_vehicle == selected_vehicle:
-            last_node_loc = old_path[-1]
+            last_node_loc = self.node_loc[old_path[-1]]
             dist = np.linalg.norm(last_node_loc - node_loc)
             return old_time + dist / self.vehicle_speed, dist / self.vehicle_speed
 
         return old_time, 0
 
     def _transition_path(
-        self,
-        current_vehicle: int,
-        selected_vehicle: int,
-        current_path: np.ndarray,
-        selected_node: int,
+            self,
+            current_vehicle: int,
+            selected_vehicle: int,
+            current_path: list[int],
+            selected_node: int,
     ):
         if current_vehicle == selected_vehicle:
-            return np.concatenate((current_path, np.array([selected_node])), axis=None)
+            current_path.append(selected_node)
+            return current_path
 
-        return np.concatenate((current_path, np.array([current_path[-1]])), axis=None)
+        current_path.append(current_path[-1])
+        return current_path
 
     def reward(self, mode="max") -> float:
         assert mode in ["max", "sum"]
@@ -153,9 +179,9 @@ class HCVRP(Env, ABC):
             return 0.0
 
     def get_action_mask(self):
-        visited = self.visited[1:]  # Get all nodes except depot.
+        visited = self.visited[self.n_depots:]  # Get all nodes except depot.
         free_capacity = self.free_capacity[:, None]
-        can_collect = np.repeat(free_capacity, self.n_nodes, axis=1) >= self.demand
+        can_collect = np.repeat(free_capacity, self.n_nodes, axis=1) >= self.demand[self.n_depots:]
 
         can_collect = can_collect * (visited == 0)
 
@@ -165,12 +191,14 @@ class HCVRP(Env, ABC):
         return np.concatenate([can_depot, can_collect], axis=1)
 
     def is_done(self) -> bool:
-        partial_route = np.array(self.partial_route)
+        partial_route = np.array(self.partial_routes)
         return np.alltrue(
             self.node_loc[0] == self.node_loc[partial_route[:, -1]]
         ) and np.alltrue(self.visited)
 
-    def step(self, selected_node: int, selected_vehicle: int):
+    def step(self, actions: np.ndarray):
+        selected_vehicle = actions[0]
+        selected_node = actions[1]
         assert selected_vehicle < self.n_vehicles
 
         self.visited[selected_node] = True  # or 1
@@ -182,12 +210,12 @@ class HCVRP(Env, ABC):
             self.rewards[vehicle].append(inc_time)
             self.acc_travel_time[vehicle] = new_time
             self.free_capacity[vehicle] = new_cap
-            self.partial_route[vehicle] = new_path
+            self.partial_routes[vehicle] = new_path
 
         obs = {
             "free_capacity": self.free_capacity,
             "acc_travel_time": self.acc_travel_time,
-            "partial_route": self.partial_route,
+            "partial_route": self.partial_routes,
             "node_loc": self.node_loc,
             "demand": self.demand,
             "action_mask": self.get_action_mask(),
