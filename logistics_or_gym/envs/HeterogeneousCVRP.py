@@ -38,7 +38,7 @@ class HeterogeneousCVRP(Env, ABC):
         self.vehicle_speed = 1
         self.n_nodes = n_nodes
         self.n_vehicles = n_vehicles
-        self.action_space = MultiDiscrete([self.n_vehicles, self.n_nodes + self.n_depots], dtype=int)
+        self.action_space = MultiDiscrete([self.n_vehicles, self.n_nodes + self.n_depots])
 
         if capacities is None:
             self.capacities = [1.0] * n_vehicles
