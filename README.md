@@ -14,7 +14,7 @@ You can install the envs using pypi
 ````shell
 pip install logistics-or-gym
 ````
-Python versions supported are: >=3.8 <3.11
+Python versions supported are: >=3.8 <3.12
 
 # Available Environments
 ## Routing
