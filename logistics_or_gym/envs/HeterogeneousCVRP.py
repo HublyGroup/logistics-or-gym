@@ -79,13 +79,13 @@ class HeterogeneousCVRP(Env, ABC):
             np.random.seed(seed=seed)
 
         self.free_capacity = np.array(self.capacities)
-        self.acc_travel_time = np.zeros(shape=(self.n_vehicles,))
+        self.acc_travel_time = np.zeros(shape=(self.n_vehicles, 1))
         self.partial_routes = [
             [np.random.randint(0, self.n_depots)] for _ in range(self.n_vehicles)
         ]  # starts at depot
         self.node_loc = np.random.uniform(0, 1, size=(self.n_depots + self.n_nodes, 2))
         self.demand = np.random.uniform(
-            0, 1, size=(self.n_depots + self.n_nodes,)
+            0, 1, size=(self.n_depots + self.n_nodes, 1)
         )  # Include depots so the indexes matches
         self.demand[list(range(self.n_depots))] = 0
         self.visited = np.zeros(
