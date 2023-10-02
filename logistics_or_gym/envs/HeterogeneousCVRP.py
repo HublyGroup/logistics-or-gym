@@ -18,11 +18,13 @@ class HeterogeneousCVRP(Env, ABC):
     prev_vehicle: int = None
     prev_node: int = None
 
-    def __init__(self,
-                 n_vehicles: int = 2,
-                 n_nodes: int = 50,
-                 n_depots: int = 1,
-                 capacities: Optional[list[float]] = None):
+    def __init__(
+        self,
+        n_vehicles: int = 2,
+        n_nodes: int = 50,
+        n_depots: int = 1,
+        capacities: Optional[list[float]] = None,
+    ):
         """
 
         :param n_vehicles (int): The number of vehicles in the plan. Defaults to 2
@@ -38,7 +40,9 @@ class HeterogeneousCVRP(Env, ABC):
         self.vehicle_speed = 1
         self.n_nodes = n_nodes
         self.n_vehicles = n_vehicles
-        self.action_space = MultiDiscrete([self.n_vehicles, self.n_nodes + self.n_depots])
+        self.action_space = MultiDiscrete(
+            [self.n_vehicles, self.n_nodes + self.n_depots]
+        )
 
         if capacities is None:
             self.capacities = [1.0] * n_vehicles
@@ -48,12 +52,16 @@ class HeterogeneousCVRP(Env, ABC):
         self.max_step = 1000
         self.observation_space = spaces.Dict(
             {
-                "free_capacity": spaces.Box(0, 100, shape=(self.n_vehicles,)),
-                "acc_travel_time": spaces.Box(0, 100, shape=(self.n_vehicles,)),
-                "partial_routes": spaces.Sequence(spaces.Sequence(spaces.Discrete(self.n_depots + self.n_nodes))),
+                "free_capacity": spaces.Box(0, 100, shape=(self.n_vehicles, 1)),
+                "acc_travel_time": spaces.Box(0, 100, shape=(self.n_vehicles, 1)),
+                "partial_routes": spaces.Sequence(
+                    spaces.Sequence(spaces.Discrete(self.n_depots + self.n_nodes))
+                ),
                 "node_loc": spaces.Box(0, 1, shape=(self.n_depots + self.n_nodes, 2)),
-                "demand": spaces.Box(0, 1, shape=(self.n_nodes,)),
-                "action_mask": spaces.Box(0, 1, shape=(self.n_vehicles, self.n_depots + self.n_nodes)),
+                "demand": spaces.Box(0, 1, shape=(self.n_nodes, 1)),
+                "action_mask": spaces.Box(
+                    0, 1, shape=(self.n_vehicles, self.n_depots + self.n_nodes)
+                ),
             }
         )
 
@@ -61,26 +69,31 @@ class HeterogeneousCVRP(Env, ABC):
         pass
 
     def reset(
-            self,
-            *,
-            seed: Optional[int] = None,
-            return_info: bool = False,
-            options: Optional[dict] = None,
+        self,
+        *,
+        seed: Optional[int] = None,
+        return_info: bool = False,
+        options: Optional[dict] = None,
     ):
         if seed is not None:
             np.random.seed(seed=seed)
 
         self.free_capacity = np.array(self.capacities)
         self.acc_travel_time = np.zeros(shape=(self.n_vehicles,))
-        self.partial_routes = [[np.random.randint(0, self.n_depots)] for _ in range(self.n_vehicles)]  # starts at depot
+        self.partial_routes = [
+            [np.random.randint(0, self.n_depots)] for _ in range(self.n_vehicles)
+        ]  # starts at depot
         self.node_loc = np.random.uniform(0, 1, size=(self.n_depots + self.n_nodes, 2))
-        self.demand = np.random.uniform(0, 1,
-                                        size=(self.n_depots + self.n_nodes,))  # Include depots so the indexes matches
+        self.demand = np.random.uniform(
+            0, 1, size=(self.n_depots + self.n_nodes,)
+        )  # Include depots so the indexes matches
         self.demand[list(range(self.n_depots))] = 0
-        self.visited = np.zeros(shape=(self.n_depots + self.n_nodes),
-                                dtype=bool)  # Include depots so the indexes matches
-        self.visited[list(range(self.n_depots))] = [d in [pr[0] for pr in self.partial_routes] for d in
-                                                    range(self.n_depots)]
+        self.visited = np.zeros(
+            shape=(self.n_depots + self.n_nodes), dtype=bool
+        )  # Include depots so the indexes matches
+        self.visited[list(range(self.n_depots))] = [
+            d in [pr[0] for pr in self.partial_routes] for d in range(self.n_depots)
+        ]
         self.rewards = [[0]] * self.n_vehicles
         self.steps = 0
         self.prev_vehicle: int = -1
@@ -97,9 +110,8 @@ class HeterogeneousCVRP(Env, ABC):
 
         return obs, {}
 
-
     def _transition(
-            self, current_vehicle: int, selected_vehicle: int, selected_node: int
+        self, current_vehicle: int, selected_vehicle: int, selected_node: int
     ):
         """The Transition function is a direct implementation of the transition function from:
         http://arxiv.org/abs/2110.02629 http://dx.doi.org/10.1109/TCYB.2021.3111082
@@ -131,7 +143,7 @@ class HeterogeneousCVRP(Env, ABC):
 
     @staticmethod
     def _transition_capacity(
-            current_vehicle: int, selected_vehicle: int, old_cap: float, old_demand: float
+        current_vehicle: int, selected_vehicle: int, old_cap: float, old_demand: float
     ):
         if current_vehicle == selected_vehicle:
             return old_cap - old_demand
@@ -139,12 +151,12 @@ class HeterogeneousCVRP(Env, ABC):
         return old_cap
 
     def _transition_acc_time(
-            self,
-            current_vehicle: int,
-            selected_vehicle: int,
-            old_time: float,
-            old_path: list[int],
-            node_loc: np.ndarray,
+        self,
+        current_vehicle: int,
+        selected_vehicle: int,
+        old_time: float,
+        old_path: list[int],
+        node_loc: np.ndarray,
     ):
         if current_vehicle == selected_vehicle:
             last_node_loc = self.node_loc[old_path[-1]]
@@ -154,11 +166,11 @@ class HeterogeneousCVRP(Env, ABC):
         return old_time, 0
 
     def _transition_path(
-            self,
-            current_vehicle: int,
-            selected_vehicle: int,
-            current_path: list[int],
-            selected_node: int,
+        self,
+        current_vehicle: int,
+        selected_vehicle: int,
+        current_path: list[int],
+        selected_node: int,
     ):
         if current_vehicle == selected_vehicle:
             current_path.append(selected_node)
@@ -179,9 +191,12 @@ class HeterogeneousCVRP(Env, ABC):
             return 0.0
 
     def get_action_mask(self):
-        visited = self.visited[self.n_depots:]  # Get all nodes except depot.
+        visited = self.visited[self.n_depots :]  # Get all nodes except depot.
         free_capacity = self.free_capacity[:, None]
-        can_collect = np.repeat(free_capacity, self.n_nodes, axis=1) >= self.demand[self.n_depots:]
+        can_collect = (
+            np.repeat(free_capacity, self.n_nodes, axis=1)
+            >= self.demand[self.n_depots :]
+        )
 
         can_collect = can_collect * (visited == 0)
 
