@@ -191,12 +191,12 @@ class HeterogeneousCVRP(Env, ABC):
             return 0.0
 
     def get_action_mask(self):
-        visited = self.visited[self.n_depots :]  # Get all nodes except depot.
+        visited = self.visited[self.n_depots :]  # Get all nodes except depots.
         can_collect = np.repeat(self.free_capacity, self.n_nodes, axis=1)
 
         can_collect = np.array(
             [
-                v >= self.demand[self.n_depots :].reshape((5,))
+                v >= self.demand[self.n_depots :].reshape((len(visited),))
                 for _, v in enumerate(can_collect)
             ],
             dtype=bool,

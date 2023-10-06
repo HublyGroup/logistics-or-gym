@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "logistics_or_gym"
-version = "0.6.0"
+version = "0.7.0"
 description = "or-problems formulated as gym environments to solve logisitcal-problems"
 authors = ["hadisdev <hadi.salameh@hotmail.com>"]
 license = "MIT"
