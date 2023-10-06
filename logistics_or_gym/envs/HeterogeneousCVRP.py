@@ -45,7 +45,7 @@ class HeterogeneousCVRP(Env, ABC):
 
         if capacities is None:
             self.capacities = np.repeat(
-                np.array(capacities, dtype=np.float32), self.n_vehicles
+                np.array([1.0], dtype=np.float32), self.n_vehicles
             ).reshape(self.n_vehicles, 1)
         else:
             assert len(capacities) == self.n_vehicles
@@ -192,11 +192,14 @@ class HeterogeneousCVRP(Env, ABC):
 
     def get_action_mask(self):
         visited = self.visited[self.n_depots :]  # Get all nodes except depot.
-        free_capacity = self.free_capacity[:, None]
-        can_collect = np.repeat(free_capacity, self.n_nodes, axis=1)
+        can_collect = np.repeat(self.free_capacity, self.n_nodes, axis=1)
 
         can_collect = np.array(
-            [v >= free_capacity[idx] for idx, v in enumerate(can_collect)], dtype=bool
+            [
+                v >= self.demand[self.n_depots :].reshape((5,))
+                for _, v in enumerate(can_collect)
+            ],
+            dtype=bool,
         )
 
         can_collect = can_collect * (visited == 0)
