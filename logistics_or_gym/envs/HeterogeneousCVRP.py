@@ -44,7 +44,9 @@ class HeterogeneousCVRP(Env, ABC):
         )
 
         if capacities is None:
-            self.capacities = [1.0] * n_vehicles
+            self.capacities = np.repeat(
+                np.array(capacities, dtype=np.float32), self.n_vehicles
+            ).reshape(self.n_vehicles, 1)
         else:
             assert len(capacities) == self.n_vehicles
 
@@ -77,7 +79,7 @@ class HeterogeneousCVRP(Env, ABC):
         if seed is not None:
             np.random.seed(seed=seed)
 
-        self.free_capacity = np.array(self.capacities)
+        self.free_capacity = self.capacities.copy()
         self.acc_travel_time = np.zeros(shape=(self.n_vehicles, 1))
         self.partial_routes = [
             [np.random.randint(0, self.n_depots)] for _ in range(self.n_vehicles)
