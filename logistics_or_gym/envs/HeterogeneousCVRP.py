@@ -16,7 +16,6 @@ class HeterogeneousCVRP(Env, ABC):
     free_capacity: np.ndarray = None
     visited: np.ndarray = None
     prev_vehicle: int = None
-    prev_node: int = None
 
     def __init__(
         self,
@@ -94,10 +93,9 @@ class HeterogeneousCVRP(Env, ABC):
         self.visited[list(range(self.n_depots))] = [
             d in [pr[0] for pr in self.partial_routes] for d in range(self.n_depots)
         ]
-        self.rewards = [[0]] * self.n_vehicles
+        self.rewards = [[0] for _ in range(self.n_vehicles)]
         self.steps = 0
         self.prev_vehicle: int = -1
-        self.prev_node: int = 0
 
         obs = {
             "free_capacity": self.free_capacity,
@@ -193,14 +191,15 @@ class HeterogeneousCVRP(Env, ABC):
     def get_action_mask(self):
         visited = self.visited[self.n_depots :]  # Get all nodes except depot.
         free_capacity = self.free_capacity[:, None]
-        can_collect = (
-            np.repeat(free_capacity, self.n_nodes, axis=1)
-            >= self.demand[self.n_depots :]
+        can_collect = np.repeat(free_capacity, self.n_nodes, axis=1)
+
+        can_collect = np.array(
+            [v >= free_capacity[idx] for idx, v in enumerate(can_collect)], dtype=bool
         )
 
         can_collect = can_collect * (visited == 0)
-
-        can_depot = self.prev_node != 0 or np.alltrue(visited)
+        prev_nodes = [route[-1] for route in self.partial_routes]
+        can_depot = prev_nodes != 0 or np.alltrue(visited)
         can_depot = np.repeat(np.array([can_depot]), self.n_vehicles)[:, None]
 
         return np.concatenate([can_depot, can_collect], axis=1)
