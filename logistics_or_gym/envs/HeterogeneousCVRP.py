@@ -58,9 +58,12 @@ class HeterogeneousCVRP(Env, ABC):
                 "partial_routes": spaces.Sequence(
                     spaces.Sequence(spaces.Discrete(self.n_depots + self.n_nodes))
                 ),
-                "depots_idx": spaces.Sequence(spaces.Discrete(self.n_depots)),
-                "demands_idx": spaces.Sequence(
-                    spaces.Discrete(self.n_depots + +self.n_nodes)
+                "depots_idx": spaces.Box(0, self.n_depots, shape=(1,), dtype=np.int32),
+                "demands_idx": spaces.Box(
+                    self.n_depots,
+                    self.n_depots + self.n_nodes,
+                    shape=(1,),
+                    dtype=np.int32,
                 ),
                 "node_loc": spaces.Box(0, 1, shape=(self.n_depots + self.n_nodes, 2)),
                 "demand": spaces.Box(0, 1, shape=(self.n_nodes, 1)),
@@ -109,8 +112,10 @@ class HeterogeneousCVRP(Env, ABC):
             "partial_routes": self.partial_routes,
             "node_loc": self.node_loc,
             "demand": self.demand,
-            "depots_idx": list(range(self.n_depots)),
-            "demands_idx": list(range(self.n_depots, self.n_depots + self.n_nodes)),
+            "depots_idx": np.array(list(range(self.n_depots))),
+            "demands_idx": np.array(
+                list(range(self.n_depots, self.n_depots + self.n_nodes))
+            ),
             "action_mask": self.get_action_mask(),
         }
 
@@ -244,8 +249,10 @@ class HeterogeneousCVRP(Env, ABC):
             "node_loc": self.node_loc,
             "demand": self.demand,
             "action_mask": self.get_action_mask(),
-            "depots_idx": list(range(self.n_depots)),
-            "demands_idx": list(range(self.n_depots, self.n_depots + self.n_nodes)),
+            "depots_idx": np.array(list(range(self.n_depots))),
+            "demands_idx": np.array(
+                list(range(self.n_depots, self.n_depots + self.n_nodes))
+            ),
         }
 
         cost = self.reward()
