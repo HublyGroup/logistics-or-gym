@@ -2,7 +2,7 @@ from abc import ABC
 from typing import Optional
 
 import numpy as np
-from gymnasium import spaces, Env
+from gymnasium import Env, spaces
 from gymnasium.spaces import MultiDiscrete
 
 
