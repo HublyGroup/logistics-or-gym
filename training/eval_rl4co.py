@@ -49,17 +49,17 @@ CONFIGS: dict[str, dict] = {
 
 
 @torch.no_grad()
-def evaluate_config(
+def _evaluate_chunk(
     model: POMO,
     env: MTVRPEnv,
-    td_template,
+    td_chunk,
     num_starts: int | None,
     num_augment: int,
     decode_type: str,
 ) -> torch.Tensor:
-    """Run one inference config; return per-instance best reward over (aug, start)."""
+    """Run one inference config on a single chunk; best reward over (aug, start)."""
 
-    td = td_template.clone()
+    td = td_chunk.clone()
 
     n_start = env.get_num_starts(td) if num_starts is None else num_starts
     n_aug = num_augment if num_augment > 0 else 1
@@ -84,6 +84,40 @@ def evaluate_config(
     return reward.detach().cpu()
 
 
+@torch.no_grad()
+def evaluate_config(
+    model: POMO,
+    env: MTVRPEnv,
+    td_template,
+    num_starts: int | None,
+    num_augment: int,
+    decode_type: str,
+    eval_batch_size: int | None = None,
+) -> torch.Tensor:
+    """Run one inference config over all instances, optionally in chunks.
+
+    High `num_starts` × `num_augment` blows up the effective batch
+    (instances × aug × starts). Chunking keeps peak memory bounded so configs
+    like sampling-500 stay tractable.
+    """
+    n_instances = td_template.batch_size[0]
+    if eval_batch_size is None or eval_batch_size >= n_instances:
+        return _evaluate_chunk(
+            model, env, td_template, num_starts, num_augment, decode_type
+        )
+
+    rewards = []
+    for start in range(0, n_instances, eval_batch_size):
+        end = min(start + eval_batch_size, n_instances)
+        rewards.append(
+            _evaluate_chunk(
+                model, env, td_template[start:end],
+                num_starts, num_augment, decode_type,
+            )
+        )
+    return torch.cat(rewards, dim=0)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--checkpoint", type=Path, required=True)
@@ -94,8 +128,24 @@ def main():
     parser.add_argument("--device", default="auto", choices=["auto", "cuda", "cpu"])
     parser.add_argument(
         "--configs",
-        default="greedy,pomo,sampling-50,sampling-200,sampling-500",
-        help="Comma-separated list of configs from CONFIGS",
+        default="greedy,pomo,sampling-50,sampling-200",
+        help="Comma-separated list of configs from CONFIGS. "
+        "sampling-500 is available but excluded by default (diminishing "
+        "returns for ~2.5x the runtime).",
+    )
+    parser.add_argument(
+        "--embed-dim",
+        type=int,
+        default=128,
+        help="Must match the checkpoint's training arch (Tier 2 default 256).",
+    )
+    parser.add_argument("--num-heads", type=int, default=8)
+    parser.add_argument(
+        "--eval-batch-size",
+        type=int,
+        default=None,
+        help="Process instances in chunks of this size to bound peak memory. "
+        "Recommended (e.g. 256) for high num_starts configs like sampling-500.",
     )
     args = parser.parse_args()
 
@@ -131,7 +181,13 @@ def main():
     state_dict = {
         k: v for k, v in raw["state_dict"].items() if not k.startswith("env.")
     }
-    model = POMO(env=env, batch_size=8, train_data_size=8, val_data_size=8)
+    model = POMO(
+        env=env,
+        batch_size=8,
+        train_data_size=8,
+        val_data_size=8,
+        policy_kwargs={"embed_dim": args.embed_dim, "num_heads": args.num_heads},
+    )
     _, unexpected = model.load_state_dict(state_dict, strict=False)
     if unexpected:
         print(f"  unexpected keys: {unexpected[:3]}{'...' if len(unexpected) > 3 else ''}")
@@ -154,7 +210,9 @@ def main():
     for name in requested:
         cfg = CONFIGS[name]
         t0 = time.time()
-        rewards = evaluate_config(model, env, td_template, **cfg)
+        rewards = evaluate_config(
+            model, env, td_template, eval_batch_size=args.eval_batch_size, **cfg
+        )
         elapsed = time.time() - t0
         results[name] = {
             "mean": float(rewards.mean()),
