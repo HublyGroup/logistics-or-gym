@@ -1,6 +1,6 @@
 [project]
 name = "logistics-or-gym"
-version = "0.11.0"
+version = "0.11.1"
 description = "or-problems formulated as gym environments to solve logisitcal-problems"
 license = "MIT"
 readme = "README.md"
